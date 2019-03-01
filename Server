@@ -1,0 +1,107 @@
+import sys, socket, select
+
+
+serverHost = '' 
+buffer = 4096 
+
+if __name__ == "__main__":
+    # must input python server.py <n_port> or else it will display message 
+    # prompting user to input correctly
+    if(len(sys.argv) < 2) :
+        print ('Please input : python server.py <n_port>')
+        sys.exit()
+       
+    # getting <n_port> from command line
+    server_nPort = int(sys.argv[1])
+    
+    while True: 
+        # creating the socket
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # server is listening for commands from client
+        serverSocket.bind(('', server_nPort))
+        serverSocket.listen(1)
+            
+        print ("Connected to server port: " + str(server_nPort))
+        
+        socketName = socket.gethostname()
+        print("socket name is: " + str(socketName))
+     
+
+    
+        
+        #Establish connection with client.
+        newSock, addr = serverSocket.accept()     
+        print ('Got connection from', addr)
+           
+        # here, we receive the command from the client (GET/PUT <filename>)
+        clientCommand = newSock.recv(4096)
+        print('Command received', repr(clientCommand))
+        if clientCommand == '':
+            sys.exit()
+            
+        # we are sending the OK message:
+        print ("Sending OK message to client")
+        newSock.send("Server replied with OK")
+            
+
+            
+        ##newSock.close()
+            
+        # creating the socket for actual data transfer
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            
+            
+        hostName = socket.gethostname()
+        print ("host name is " + str(hostName))
+    
+           
+
+        # handle the case where we download the file from disk
+        print("executing " + clientCommand)       
+        if ("GET" in clientCommand) or ("get" in clientCommand):
+            if "GET" in clientCommand:
+                filename= clientCommand.replace("GET ", "")
+                print(filename)
+            elif "get" in clientCommand:
+                filename= clientCommand.replace("get ", "")
+                print(filename)
+            
+            # first check if file exists
+            
+            print("opening file to read")
+            findFile = open(filename, "r")
+            if findFile.mode == "r":
+                print("reading")
+                lines = findFile.read()
+                print("sending lines")
+                print(lines)
+                if lines == '':
+                    newSock.send('\n')
+                else:
+                    newSock.send(lines)
+                print("sent")
+                findFile.close()
+            
+            
+            
+        # handle the case where we upload the file to the disk
+        elif ("PUT" in clientCommand) or ("put" in clientCommand):
+            if "PUT" in clientCommand:
+                filename= clientCommand.replace("PUT ", "")
+            elif "put" in clientCommand:
+                filename= clientCommand.replace("put ", "")    
+            
+            print("creating file " + filename)
+            createFile = open(filename, 'a')
+            print("created file")
+            line = newSock.recv(4096)
+            print("in text:" + line)
+            createFile.write(line)
+            print("done downloading file")
+            createFile.close()            
+
+        
+
+
