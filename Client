@@ -1,0 +1,114 @@
+import sys, socket, select
+import random
+import os
+
+# this is our client
+
+if __name__ == "__main__":
+    # when user is running client in command line, they must input 
+    # 'python client.py <server_address> <n_port>'
+    # otherwise. it would tell user to then exit program
+    if(len(sys.argv) < 3) :
+        print ('Please input : python client.py <server_address> <n_port>')
+        sys.exit()
+        
+    # getting <server_address> and <n_port> from command line
+    serverHost = sys.argv[1]
+    server_nPort = int(sys.argv[2])        
+    
+    while True:    
+        # creating socket
+        clientServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            ##clientServer.settimeout(2)
+             
+             
+        # connect to remote serverHost
+        try :
+            clientServer.connect((serverHost, server_nPort))
+            print("Connected to server n_port")
+        except :
+            print ('Could not connect to server n_port')
+            sys.exit()
+                
+        
+            
+        # this is where client send the command GET/PUT
+        clientMsg = raw_input('Input <command>: ')
+        if ("exit" == clientMsg) or ("EXIT" == clientMsg):
+            sys.exit()            
+        clientServer.send(clientMsg.encode())
+        # server send back OK message and we print it
+        OKmsg = clientServer.recv(4096)
+        print(OKmsg)
+        
+        
+        # python will generate a random port number for r_port
+        r_port = random.randint(1024, 2000)
+        
+        client_address = socket.gethostname()
+        
+        # we create server socket using r_port
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        serverSocket.bind((client_address, int(r_port)))
+        
+        
+        print("r_port is: " + str(r_port) + " and client_address is: " + str(client_address))
+        
+        socketName = socket.gethostname()
+        print("socket name is: " + str(socketName))
+        
+
+            
+        # handle the case where we download the file from disk
+    
+        if ("GET" in clientMsg) or ("get" in clientMsg):
+            if "GET" in clientMsg:
+                filename= clientMsg.replace("GET ", "")
+                print(filename)
+            elif "get" in clientMsg:
+                filename= clientMsg.replace("get ", "")
+                print(filename)
+            
+            print("creating file " + filename)
+            createFile = open(filename, 'a')
+            print("created file")
+            line = clientServer.recv(4096)
+            print("in text:" + line)
+            createFile.write(line)
+            print("done downloading file")
+            createFile.close()
+            
+            
+        # handle the case where we upload the file to the disk
+        elif ("PUT" in clientMsg) or ("put" in clientMsg):
+            if "PUT" in clientMsg:
+                filename= clientMsg.replace("PUT ", "")
+            elif "put" in clientMsg:
+                filename= clientMsg.replace("put ", "")
+                print("opening file to read")
+                
+            findFile = open(filename, "r")
+            if findFile.mode == "r":
+                print("reading")
+                lines = findFile.read()
+                print("sending lines")
+                print(lines)
+                if lines == '':
+                    clientServer.send('\n')
+                else:
+                    clientServer.send(lines)     
+                print("sent")
+                findFile.close()
+        
+        serverSocket.close()
+        clientServer.close()
+
+    
+    
+    
+    
+## sources: 
+## https://www.guru99.com/reading-and-writing-files-in-python.html
+## ^ this if for writing/reading files
